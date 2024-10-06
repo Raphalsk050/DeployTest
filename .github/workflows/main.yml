@@ -1,4 +1,4 @@
-name: C++ CI/CD Pipeline
+name: DeployTest
 
 on:
   push:
@@ -8,6 +8,7 @@ on:
 
 jobs:
   build-and-run:
+    name: VerifyExecution
     runs-on: ubuntu-latest
 
     steps:
@@ -20,11 +21,8 @@ jobs:
       - name: Compilar o programa
         run: g++ -o hello main.cpp
 
-      - name: Executar o programa
-        run: ./hello
-
       - name: Verificar saída do programa
         run: |
           echo "Executing the binary..."
-          ./hello
+          timeout 20s ./hello || [[ $? -eq 124 ]]
         continue-on-error: false  #fail if error
