@@ -23,7 +23,8 @@ jobs:
       - name: Executar o programa
         run: ./hello
 
-      - name: Deploy (opcional)
-        if: github.ref == 'refs/heads/main'
+      - name: Verificar saída do programa
         run: |
-          # Comandos para deploy (substitua por comandos reais)
+          echo "Executing the binary..."
+          ./hello
+        continue-on-error: false  #fail if error
