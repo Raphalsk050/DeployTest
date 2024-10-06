@@ -1,0 +1,29 @@
+name: C++ CI/CD Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do código
+        uses: actions/checkout@v3
+
+      - name: Instalar o compilador C++
+        run: sudo apt-get update && sudo apt-get install -y build-essential
+
+      - name: Compilar o programa
+        run: g++ -o hello main.cpp
+
+      - name: Executar o programa
+        run: ./hello
+
+      - name: Deploy (opcional)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Comandos para deploy (substitua por comandos reais)
