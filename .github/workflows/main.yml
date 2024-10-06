@@ -1,30 +1,54 @@
-name: C++ CI/CD Pipeline
+name: DeployTest
 
 on:
-  push:
-    branches: [main]
   pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
   build-and-run:
+    name: VerifyExecution
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout do código
         uses: actions/checkout@v3
 
-      - name: Instalar o compilador C++
+      - name: Extrair NAMESPACE e APP do body da PR e converter para Unix
+        id: extract_vars
+        run: |
+          # Captura o conteúdo do corpo da PR, remove os caracteres de retorno de carro e armazena em uma variável
+          BODY=$(echo "${{ github.event.pull_request.body }}" | tr -d '\r')
+
+          # Procura uma linha que começa com `make NAMESPACE=algumnome APP=algumnome`
+          LINE=$(echo "$BODY" | grep -oP '^make[[:space:]]+NAMESPACE=([a-zA-Z0-9._-]+)[[:space:]]+APP=([a-zA-Z0-9_-]+)')
+
+          if [[ -n "$LINE" ]]; then
+            # Usa regex para extrair os valores de NAMESPACE e APP
+            if [[ "$LINE" =~ make[[:space:]]+NAMESPACE=([a-zA-Z0-9._-]+)[[:space:]]+APP=([a-zA-Z0-9_-]+) ]]; then
+              NAMESPACE="${BASH_REMATCH[1]}"
+              APP="${BASH_REMATCH[2]}"
+
+              # Salva NAMESPACE e APP no ambiente do GitHub
+              echo "NAMESPACE=$NAMESPACE" >> $GITHUB_ENV
+              echo "APP=$APP" >> $GITHUB_ENV
+              echo "Comando encontrado: NAMESPACE=$NAMESPACE, APP=$APP"
+            fi
+          else
+            echo "Comando 'make NAMESPACE=<valor> APP=<valor>' não encontrado no body da PR."
+            exit 1  # Falha se o comando não for encontrado
+          fi
+
+      - name: Instalar o compilador C++ e ferramentas necessárias
         run: sudo apt-get update && sudo apt-get install -y build-essential
 
-      - name: Compilar o programa
-        run: g++ -o hello main.cpp
-
-      - name: Executar o programa
-        run: ./hello
-
-      - name: Verificar saída do programa
+      - name: Compilar o programa usando NAMESPACE e APP
         run: |
-          echo "Executing the binary..."
-          ./hello
-        continue-on-error: false  #fail if error
+          echo "Compilando o programa com NAMESPACE=$NAMESPACE e APP=$APP"
+          make NAMESPACE=$NAMESPACE APP=$APP
+
+      - name: Executar o programa com as variáveis NAMESPACE e APP
+        run: |
+          echo "Executando o programa com NAMESPACE=$NAMESPACE e APP=$APP"
+          timeout 30s ./"$APP" || [[ $? -eq 124 ]]
+        continue-on-error: false
